@@ -1,6 +1,7 @@
 import itertools
 from copy import copy
-from typing import Any, Iterable, List, NoReturn, Optional, Set, Union, Tuple as TypedTuple, cast
+from typing import Any, Iterable, List, Optional, Set, Union, Tuple as TypedTuple, cast
+from typing_extensions import Self, NoReturn
 
 from pypika.enums import Dialects
 from pypika.queries import (
@@ -13,11 +14,20 @@ from pypika.queries import (
     QueryBuilder,
     JoinOn,
 )
-from pypika.terms import ArithmeticExpression, Criterion, EmptyCriterion, Field, Function, Star, Term, ValueWrapper
+from pypika.terms import (
+    ArithmeticExpression,
+    Criterion,
+    EmptyCriterion,
+    Field,
+    Function,
+    Star,
+    Term,
+    ValueWrapper,
+)
 from pypika.utils import QueryException, builder, format_quotes
 
 
-class SnowflakeQuery(Query):
+class SnowflakeQuery(Query["SnowflakeQueryBuilder"]):
     """
     Defines a query class for use with Snowflake.
     """
@@ -61,7 +71,7 @@ class SnowflakeDropQueryBuilder(DropQueryBuilder):
         super().__init__(dialect=Dialects.SNOWFLAKE)
 
 
-class MySQLQuery(Query):
+class MySQLQuery(Query["MySQLQueryBuilder"]):
     """
     Defines a query class for use with MySQL.
     """
@@ -97,7 +107,7 @@ class MySQLQueryBuilder(QueryBuilder):
         self._for_update_skip_locked = False
         self._for_update_of: Set[str] = set()
 
-    def __copy__(self) -> "MySQLQueryBuilder":
+    def __copy__(self) -> Self:
         newone = cast(MySQLQueryBuilder, super().__copy__())
         newone._duplicate_updates = copy(self._duplicate_updates)
         newone._ignore_duplicates = copy(self._ignore_duplicates)
@@ -228,7 +238,7 @@ class MySQLDropQueryBuilder(DropQueryBuilder):
     QUOTE_CHAR = "`"
 
 
-class VerticaQuery(Query):
+class VerticaQuery(Query["VerticaQueryBuilder"]):
     """
     Defines a query class for use with Vertica.
     """
@@ -350,7 +360,7 @@ class VerticaCopyQueryBuilder:
         return self.get_sql()
 
 
-class OracleQuery(Query):
+class OracleQuery(Query["OracleQueryBuilder"]):
     """
     Defines a query class for use with Oracle.
     """
@@ -374,7 +384,7 @@ class OracleQueryBuilder(QueryBuilder):
         return super().get_sql(*args, **kwargs)
 
 
-class PostgreSQLQuery(Query):
+class PostgreSQLQuery(Query["PostgreSQLQueryBuilder"]):
     """
     Defines a query class for use with PostgreSQL.
     """
@@ -406,7 +416,7 @@ class PostgreSQLQueryBuilder(QueryBuilder):
         self._for_update_skip_locked = False
         self._for_update_of: Set[str] = set()
 
-    def __copy__(self) -> "PostgreSQLQueryBuilder":
+    def __copy__(self) -> Self:
         newone = cast(PostgreSQLQueryBuilder, super().__copy__())
         newone._returns = copy(self._returns)
         newone._on_conflict_do_updates = copy(self._on_conflict_do_updates)
@@ -428,7 +438,7 @@ class PostgreSQLQueryBuilder(QueryBuilder):
         self._for_update_of = set(of)
 
     @builder
-    def on_conflict(self, *target_fields: Union[str, Term]) -> None:
+    def on_conflict(self, *target_fields: Union[str, Term, None]) -> None:
         if not self._insert_table:
             raise QueryException("On conflict only applies to insert query")
 
@@ -655,7 +665,7 @@ class PostgreSQLQueryBuilder(QueryBuilder):
         return querystring
 
 
-class RedshiftQuery(Query):
+class RedshiftQuery(Query["RedShiftQueryBuilder"]):
     """
     Defines a query class for use with Amazon Redshift.
     """
@@ -669,7 +679,7 @@ class RedShiftQueryBuilder(QueryBuilder):
     QUERY_CLS = RedshiftQuery
 
 
-class MSSQLQuery(Query):
+class MSSQLQuery(Query["MSSQLQueryBuilder"]):
     """
     Defines a query class for use with Microsoft SQL Server.
     """
@@ -751,7 +761,7 @@ class MSSQLQueryBuilder(QueryBuilder):
         )
 
 
-class ClickHouseQuery(Query):
+class ClickHouseQuery(Query["ClickHouseQueryBuilder"]):
     """
     Defines a query class for use with Yandex ClickHouse.
     """
@@ -767,23 +777,23 @@ class ClickHouseQuery(Query):
         return ClickHouseDropQueryBuilder().drop_database(database)
 
     @classmethod
-    def drop_table(self, table: Union[Table, str]) -> "ClickHouseDropQueryBuilder":
+    def drop_table(cls, table: Union[Table, str]) -> "ClickHouseDropQueryBuilder":
         return ClickHouseDropQueryBuilder().drop_table(table)
 
     @classmethod
-    def drop_dictionary(self, dictionary: str) -> "ClickHouseDropQueryBuilder":
+    def drop_dictionary(cls, dictionary: str) -> "ClickHouseDropQueryBuilder":
         return ClickHouseDropQueryBuilder().drop_dictionary(dictionary)
 
     @classmethod
-    def drop_quota(self, quota: str) -> "ClickHouseDropQueryBuilder":
+    def drop_quota(cls, quota: str) -> "ClickHouseDropQueryBuilder":
         return ClickHouseDropQueryBuilder().drop_quota(quota)
 
     @classmethod
-    def drop_user(self, user: str) -> "ClickHouseDropQueryBuilder":
+    def drop_user(cls, user: str) -> "ClickHouseDropQueryBuilder":
         return ClickHouseDropQueryBuilder().drop_user(user)
 
     @classmethod
-    def drop_view(self, view: str) -> "ClickHouseDropQueryBuilder":
+    def drop_view(cls, view: str) -> "ClickHouseDropQueryBuilder":
         return ClickHouseDropQueryBuilder().drop_view(view)
 
 
@@ -858,7 +868,7 @@ class SQLLiteValueWrapper(ValueWrapper):
         return super().get_value_sql(**kwargs)
 
 
-class SQLLiteQuery(Query):
+class SQLLiteQuery(Query["SQLLiteQueryBuilder"]):
     """
     Defines a query class for use with Microsoft SQL Server.
     """
