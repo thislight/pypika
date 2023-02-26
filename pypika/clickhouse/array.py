@@ -1,5 +1,5 @@
 import abc
-from typing import Union
+from typing import Union, Optional, TYPE_CHECKING
 
 from pypika.terms import (
     Field,
@@ -8,9 +8,14 @@ from pypika.terms import (
 )
 from pypika.utils import format_alias_sql
 
+if TYPE_CHECKING:
+    from pypika.queries import Schema
+
 
 class Array(Term):
-    def __init__(self, values: list, converter_cls=None, converter_options: dict = None, alias: str = None):
+    def __init__(
+        self, values: list, converter_cls=None, converter_options: Optional[dict] = None, alias: Optional[str] = None
+    ):
         super().__init__(alias)
         self._values = values
         self._converter_cls = converter_cls
@@ -35,14 +40,14 @@ class HasAny(Function):
         self,
         left_array: Union[Array, Field],
         right_array: Union[Array, Field],
-        alias: str = None,
-        schema: str = None,
+        alias: Optional[str] = None,
+        schema: Optional["Schema"] = None,
     ):
         self._left_array = left_array
         self._right_array = right_array
         self.alias = alias
         self.schema = schema
-        self.args = tuple()
+        self.args = []
         self.name = "hasAny"
 
     def get_sql(self, with_alias=False, with_namespace=False, quote_char=None, dialect=None, **kwargs):
@@ -57,7 +62,7 @@ class HasAny(Function):
 
 
 class _AbstractArrayFunction(Function, metaclass=abc.ABCMeta):
-    def __init__(self, array: Union[Array, Field], alias: str = None, schema: str = None):
+    def __init__(self, array: Union[Array, Field], alias: Optional[str] = None, schema: Optional["Schema"] = None):
         self.schema = schema
         self.alias = alias
         self.name = self.clickhouse_function()
