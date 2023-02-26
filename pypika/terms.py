@@ -599,7 +599,7 @@ class Criterion(Term):
         return ComplexCriterion(Boolean.xor_, self, other)
 
     @staticmethod
-    def any(terms: Iterable[Term] = ()) -> "EmptyCriterion":
+    def any(terms: Iterable[Term] = ()) -> "Criterion":
         crit = EmptyCriterion()
 
         for term in terms:
@@ -608,7 +608,7 @@ class Criterion(Term):
         return crit
 
     @staticmethod
-    def all(terms: Iterable[Any] = ()) -> "EmptyCriterion":
+    def all(terms: Iterable[Any] = ()) -> "Criterion":
         crit = EmptyCriterion()
 
         for term in terms:
