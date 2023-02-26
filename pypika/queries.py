@@ -303,7 +303,7 @@ def make_tables(
             t = Table(
                 name=name,
                 schema=kwargs.get("schema"),
-                query_cls=kwargs.get("query_cls"),
+                query_cls=query_cls,
             )
         tables.append(t)
     return tables
