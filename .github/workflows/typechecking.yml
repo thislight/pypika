@@ -1,12 +1,6 @@
 name: "Type Checking"
 
-on:
-  push:
-    branches: ["master"]
-  pull_request:
-    types: [opened, reopened, review_requested]
-    paths:
-      - "**.py"
+on: push
 
 jobs:
   typechecking:
