@@ -70,7 +70,6 @@ WrappedConstantValueUnion = Union[
 WrappedConstant = Union["Term", WrappedConstantStrict]
 
 
-
 class Term(Node, SQLPart):
     def __init__(self, alias: Optional[str] = None) -> None:
         self.alias = alias
