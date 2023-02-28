@@ -588,17 +588,17 @@ class SystemTimeValue(LiteralValue):
 
 
 class Criterion(Term):
-    def __and__(self, other: Any) -> "ComplexCriterion":
+    def __and__(self, other: "Criterion") -> "ComplexCriterion":
         return ComplexCriterion(Boolean.and_, self, other)
 
-    def __or__(self, other: Any) -> "ComplexCriterion":
+    def __or__(self, other: "Criterion") -> "ComplexCriterion":
         return ComplexCriterion(Boolean.or_, self, other)
 
-    def __xor__(self, other: Any) -> "ComplexCriterion":
+    def __xor__(self, other: "Criterion") -> "ComplexCriterion":
         return ComplexCriterion(Boolean.xor_, self, other)
 
     @staticmethod
-    def any(terms: Iterable[Term] = ()) -> "Criterion":
+    def any(terms: Iterable["Criterion"] = ()) -> "Criterion":
         crit = EmptyCriterion()
 
         for term in terms:
@@ -607,7 +607,7 @@ class Criterion(Term):
         return crit
 
     @staticmethod
-    def all(terms: Iterable[Any] = ()) -> "Criterion":
+    def all(terms: Iterable["Criterion"] = ()) -> "Criterion":
         crit = EmptyCriterion()
 
         for term in terms:
@@ -623,13 +623,13 @@ class EmptyCriterion(Criterion):
     def fields_(self) -> Set["Field"]:
         return set()
 
-    def __and__(self, other: Any) -> Any:
+    def __and__(self, other: CriterionT) -> CriterionT:
         return other
 
-    def __or__(self, other: Any) -> Any:
+    def __or__(self, other: CriterionT) -> CriterionT:
         return other
 
-    def __xor__(self, other: Any) -> Any:
+    def __xor__(self, other: CriterionT) -> CriterionT:
         return other
 
     @property
