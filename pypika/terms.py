@@ -156,27 +156,22 @@ class Term(Node, SQLPart):
 
     @overload
     @staticmethod
-    def wrap_json(val: TermT, wrapper_cls: Optional[Type["ValueWrapper"]] = None) -> TermT:
+    def wrap_json(val: TermT, wrapper_cls: Optional[Type["ValueWrapper"]] = None) -> TermT:  # type: ignore[misc]
         ...
 
     @overload
     @staticmethod
-    def wrap_json(val: IntervalT, wrapper_cls: Optional[Type["ValueWrapper"]] = None) -> IntervalT:
+    def wrap_json(val: None, wrapper_cls: Optional[Type["ValueWrapper"]] = None) -> "NullValue":  # type: ignore[misc]
         ...
 
     @overload
     @staticmethod
-    def wrap_json(val: None, wrapper_cls: Optional[Type["ValueWrapper"]] = None) -> "NullValue":
+    def wrap_json(val: Union[str, int, bool], wrapper_cls: Type["ValueWrapperT"]) -> "ValueWrapperT":  # type: ignore[misc]
         ...
 
     @overload
     @staticmethod
-    def wrap_json(val: Union[str, int, bool], wrapper_cls: Type["ValueWrapperT"]) -> "ValueWrapperT":
-        ...
-
-    @overload
-    @staticmethod
-    def wrap_json(val: Union[str, int, bool], wrapper_cls: None = None) -> "ValueWrapper":
+    def wrap_json(val: Union[str, int, bool], wrapper_cls: None = None) -> "ValueWrapper":  # type: ignore[misc]
         ...
 
     @overload
@@ -588,18 +583,18 @@ class SystemTimeValue(LiteralValue):
 
 
 class Criterion(Term):
-    def __and__(self, other: "Criterion") -> "ComplexCriterion":
+    def __and__(self, other: "Criterion") -> "Criterion":
         return ComplexCriterion(Boolean.and_, self, other)
 
-    def __or__(self, other: "Criterion") -> "ComplexCriterion":
+    def __or__(self, other: "Criterion") -> "Criterion":
         return ComplexCriterion(Boolean.or_, self, other)
 
-    def __xor__(self, other: "Criterion") -> "ComplexCriterion":
+    def __xor__(self, other: "Criterion") -> "Criterion":
         return ComplexCriterion(Boolean.xor_, self, other)
 
     @staticmethod
     def any(terms: Iterable["Criterion"] = ()) -> "Criterion":
-        crit = EmptyCriterion()
+        crit: Criterion = EmptyCriterion()
 
         for term in terms:
             crit |= term
@@ -608,7 +603,7 @@ class Criterion(Term):
 
     @staticmethod
     def all(terms: Iterable["Criterion"] = ()) -> "Criterion":
-        crit = EmptyCriterion()
+        crit: Criterion = EmptyCriterion()
 
         for term in terms:
             crit &= term
