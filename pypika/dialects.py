@@ -1,7 +1,9 @@
 import itertools
 from copy import copy
-from typing import Any, Iterable, List, Optional, Set, Union, Tuple as TypedTuple, cast
-from typing_extensions import Self, NoReturn
+from typing import Any, Iterable, List, Optional, Set, Union, Tuple as TypedTuple, cast, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing_extensions import Self, NoReturn
 
 from pypika.enums import Dialects
 from pypika.queries import (
@@ -107,7 +109,7 @@ class MySQLQueryBuilder(QueryBuilder):
         self._for_update_skip_locked = False
         self._for_update_of: Set[str] = set()
 
-    def __copy__(self) -> Self:
+    def __copy__(self) -> "Self":
         newone = super().__copy__()
         newone._duplicate_updates = copy(self._duplicate_updates)
         newone._ignore_duplicates = copy(self._ignore_duplicates)
@@ -416,7 +418,7 @@ class PostgreSQLQueryBuilder(QueryBuilder):
         self._for_update_skip_locked = False
         self._for_update_of: Set[str] = set()
 
-    def __copy__(self) -> Self:
+    def __copy__(self) -> "Self":
         newone = super().__copy__()
         newone._returns = copy(self._returns)
         newone._on_conflict_do_updates = copy(self._on_conflict_do_updates)
@@ -809,7 +811,7 @@ class ClickHouseQueryBuilder(QueryBuilder):
         return "ALTER TABLE {table}".format(table=self._update_table.get_sql(**kwargs))
 
     def _from_sql(self, with_namespace: bool = False, **kwargs: Any) -> str:
-        def _error_none(v) -> NoReturn:
+        def _error_none(v) -> "NoReturn":
             raise TypeError("expect Selectable or QueryBuilder, got {}".format(type(v).__name__))
 
         selectable = ",".join(

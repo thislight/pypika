@@ -20,7 +20,9 @@ from typing import (
     Union,
     overload,
 )
-from typing_extensions import Self
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 from pypika.enums import Arithmetic, Boolean, Comparator, Dialects, Equality, JSONOperators, Matching, Order
 from pypika.utils import (
@@ -31,7 +33,6 @@ from pypika.utils import (
     format_quotes,
     ignore_copy,
     resolve_is_aggregate,
-    SQLPart,
 )
 
 if TYPE_CHECKING:
@@ -70,7 +71,7 @@ WrappedConstantValueUnion = Union[
 WrappedConstant = Union["Term", WrappedConstantStrict]
 
 
-class Term(Node, SQLPart):
+class Term(Node):
     def __init__(self, alias: Optional[str] = None) -> None:
         self.alias = alias
 
@@ -1254,7 +1255,7 @@ class Case(Criterion):
         self._else = self._else.replace_table(current_table, new_table) if self._else else None
 
     @builder
-    def else_(self, term: WrappedConstantValue) -> Self:
+    def else_(self, term: WrappedConstantValue) -> "Self":
         self._else = self.wrap_constant(term)
         return self
 
@@ -1742,7 +1743,7 @@ class PseudoColumn(Term):
         return self.name
 
 
-class AtTimezone(Term, SQLPart):
+class AtTimezone(Term):
     """
     Generates AT TIME ZONE SQL.
     Examples:

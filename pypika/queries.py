@@ -18,8 +18,11 @@ from typing import (
     cast,
     TypeVar,
     overload,
+    TYPE_CHECKING,
 )
-from typing_extensions import Self
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 from pypika.enums import Dialects, JoinType, ReferenceOption, SetOperation, Order
 from pypika.terms import (
@@ -49,7 +52,6 @@ from pypika.utils import (
     format_alias_sql,
     format_quotes,
     ignore_copy,
-    SQLPart,
 )
 
 __author__ = "Timothy Heys"
@@ -93,7 +95,7 @@ class Selectable(Node):
         raise NotImplementedError
 
 
-class AliasedQuery(Selectable, SQLPart):
+class AliasedQuery(Selectable):
     def __init__(self, name: str, query: Optional[Selectable] = None) -> None:
         super().__init__(alias=name)
         self.name = name
@@ -111,7 +113,7 @@ class AliasedQuery(Selectable, SQLPart):
         return hash(str(self.name))
 
 
-class Schema(SQLPart):
+class Schema:
     def __init__(self, name: str, parent: Optional["Schema"] = None) -> None:
         self._name = name
         self._parent = parent
@@ -488,7 +490,7 @@ def make_tables(
     return tables
 
 
-class Column(SQLPart):
+class Column:
     """Represents a column."""
 
     def __init__(
@@ -546,7 +548,7 @@ def make_columns(*names: Union[TypedTuple[str, str], str]) -> List[Column]:
     return columns
 
 
-class PeriodFor(SQLPart):
+class PeriodFor:
     def __init__(self, name: str, start_column: Union[str, Column], end_column: Union[str, Column]) -> None:
         self.name = name
         self.start_column = start_column if isinstance(start_column, Column) else Column(start_column)
@@ -568,7 +570,7 @@ class PeriodFor(SQLPart):
 _TableClass = Table
 
 
-class _SetOperation(Selectable, Term, SQLPart):  # type: ignore
+class _SetOperation(Selectable, Term):  # type: ignore
     """
     A Query class wrapper for a all set operations, Union DISTINCT or ALL, Intersect, Except or Minus
 
@@ -729,7 +731,7 @@ class _SetOperation(Selectable, Term, SQLPart):  # type: ignore
         return " LIMIT {limit}".format(limit=self._limit)
 
 
-class QueryBuilder(Selectable, Term, SQLPart):
+class QueryBuilder(Selectable, Term):
     """
     Query Builder is the main class in pypika which stores the state of a query and offers functions which allow the
     state to be branched immutably.
@@ -799,7 +801,7 @@ class QueryBuilder(Selectable, Term, SQLPart):
 
         self.immutable = immutable
 
-    def __copy__(self) -> Self:
+    def __copy__(self) -> "Self":
         newone = type(self).__new__(type(self))
         newone.__dict__.update(self.__dict__)
         newone._select_star_tables = copy(self._select_star_tables)
@@ -1176,10 +1178,10 @@ class QueryBuilder(Selectable, Term, SQLPart):
         ...
 
     @overload
-    def __getitem__(self, item: builtins.slice) -> Self:
+    def __getitem__(self, item: builtins.slice) -> "Self":
         ...
 
-    def __getitem__(self, item: Union[str, builtins.slice]) -> Union[Self, Field]:
+    def __getitem__(self, item: Union[str, builtins.slice]) -> Union["Self", Field]:
         if not isinstance(item, slice):
             return super().__getitem__(item)
         return self.slice(item)
@@ -1559,7 +1561,7 @@ class QueryBuilder(Selectable, Term, SQLPart):
     def _using_sql(self, with_namespace: bool = False, **kwargs: Any) -> str:
         return " USING {selectable}".format(
             selectable=",".join(
-                clause.get_sql(subquery=True, with_alias=True, **kwargs) if isinstance(clause, SQLPart) else clause
+                clause.get_sql(subquery=True, with_alias=True, **kwargs) if isinstance(clause, Selectable) else clause
                 for clause in self._using
             )
         )
@@ -1720,7 +1722,7 @@ class Joiner(Generic[QueryBuilderType]):
         return self.query
 
 
-class Join(SQLPart):
+class Join:
     def __init__(self, item: JoinableTerm, how: JoinType) -> None:
         self.item = item
         self.how = how
@@ -1834,7 +1836,7 @@ class JoinUsing(Join):
             raise ValueError("new_table should not be None for {}".format(type(self).__name__))
 
 
-class CreateQueryBuilder(SQLPart):
+class CreateQueryBuilder:
     """
     Query builder used to build CREATE queries.
     """
@@ -2187,7 +2189,7 @@ class CreateQueryBuilder(SQLPart):
         return self.__str__()
 
 
-class DropQueryBuilder(SQLPart):
+class DropQueryBuilder:
     """
     Query builder used to build DROP queries.
     """
