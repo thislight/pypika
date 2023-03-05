@@ -1254,7 +1254,7 @@ class Case(Criterion):
         self._else = self._else.replace_table(current_table, new_table) if self._else else None
 
     @builder
-    def else_(self, term: WrappedConstantValue) -> "Case":
+    def else_(self, term: WrappedConstantValue) -> Self:
         self._else = self.wrap_constant(term)
         return self
 
