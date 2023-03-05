@@ -18,7 +18,6 @@ from typing import (
     cast,
     TypeVar,
     overload,
-    TYPE_CHECKING,
 )
 from typing_extensions import Self
 
@@ -32,6 +31,7 @@ from pypika.terms import (
     Index,
     Rollup,
     Star,
+    Node,
     Term,
     Tuple,
     ValueWrapper,
@@ -58,15 +58,10 @@ __email__ = "theys@kayak.com"
 
 _T = TypeVar("_T")
 SchemaT = TypeVar("SchemaT", bound="Schema")
-if TYPE_CHECKING:
-    from typing_extensions import TypeVar
-
-    QueryBuilderType = TypeVar("QueryBuilderType", bound="QueryBuilder", covariant=True, default="QueryBuilder")
-else:
-    QueryBuilderType = TypeVar("QueryBuilderType", bound="QueryBuilder", covariant=True)
+QueryBuilderType = TypeVar("QueryBuilderType", bound="QueryBuilder", covariant=True)
 
 
-class Selectable(Term):
+class Selectable(Node):
     def __init__(self, alias: Optional[str]) -> None:
         self.alias = alias
 
@@ -146,8 +141,190 @@ class Schema(SQLPart):
 
 class Database(Schema):
     @ignore_copy
-    def __getattr__(self, item: str) -> Schema:
+    def __getattr__(self, item: str) -> Schema:  # type: ignore
         return Schema(item, parent=self)
+
+
+class BaseQuery(Generic[QueryBuilderType]):
+    """
+    Query is the primary class and entry point in pypika. It is used to build queries iteratively using the builder
+    design
+    pattern.
+
+    This class is immutable.
+    """
+
+    @classmethod
+    def _builder(cls, **kwargs: Any) -> "QueryBuilderType":
+        raise NotImplementedError
+
+    @classmethod
+    def from_(cls, table: Union[Selectable, str], **kwargs: Any) -> "QueryBuilderType":
+        """
+        Query builder entry point.  Initializes query building and sets the table to select from.  When using this
+        function, the query becomes a SELECT query.
+
+        :param table:
+            Type: Table or str
+
+            An instance of a Table object or a string table name.
+
+        :returns QueryBuilder
+        """
+        return cls._builder(**kwargs).from_(table)
+
+    @classmethod
+    def create_table(cls, table: Union[str, "Table"]) -> "CreateQueryBuilder":
+        """
+        Query builder entry point. Initializes query building and sets the table name to be created. When using this
+        function, the query becomes a CREATE statement.
+
+        :param table: An instance of a Table object or a string table name.
+
+        :return: CreateQueryBuilder
+        """
+        return CreateQueryBuilder().create_table(table)
+
+    @classmethod
+    def drop_database(cls, database: Union[Database, str]) -> "DropQueryBuilder":
+        """
+        Query builder entry point. Initializes query building and sets the table name to be dropped. When using this
+        function, the query becomes a DROP statement.
+
+        :param database: An instance of a Database object or a string database name.
+
+        :return: DropQueryBuilder
+        """
+        return DropQueryBuilder().drop_database(database)
+
+    @classmethod
+    def drop_table(cls, table: Union[str, "Table"]) -> "DropQueryBuilder":
+        """
+        Query builder entry point. Initializes query building and sets the table name to be dropped. When using this
+        function, the query becomes a DROP statement.
+
+        :param table: An instance of a Table object or a string table name.
+
+        :return: DropQueryBuilder
+        """
+        return DropQueryBuilder().drop_table(table)
+
+    @classmethod
+    def drop_user(cls, user: str) -> "DropQueryBuilder":
+        """
+        Query builder entry point. Initializes query building and sets the table name to be dropped. When using this
+        function, the query becomes a DROP statement.
+
+        :param user: String user name.
+
+        :return: DropQueryBuilder
+        """
+        return DropQueryBuilder().drop_user(user)
+
+    @classmethod
+    def drop_view(cls, view: str) -> "DropQueryBuilder":
+        """
+        Query builder entry point. Initializes query building and sets the table name to be dropped. When using this
+        function, the query becomes a DROP statement.
+
+        :param view: String view name.
+
+        :return: DropQueryBuilder
+        """
+        return DropQueryBuilder().drop_view(view)
+
+    @classmethod
+    def into(cls, table: Union["Table", str], **kwargs: Any) -> "QueryBuilderType":
+        """
+        Query builder entry point.  Initializes query building and sets the table to insert into.  When using this
+        function, the query becomes an INSERT query.
+
+        :param table:
+            Type: Table or str
+
+            An instance of a Table object or a string table name.
+
+        :returns QueryBuilder
+        """
+        return cls._builder(**kwargs).into(table)
+
+    @classmethod
+    def with_(cls, table: Selectable, name: str, **kwargs: Any) -> "QueryBuilderType":
+        return cls._builder(**kwargs).with_(table, name)
+
+    @classmethod
+    def select(cls, *terms: Union[int, float, str, bool, Term], **kwargs: Any) -> "QueryBuilderType":
+        """
+        Query builder entry point.  Initializes query building without a table and selects fields.  Useful when testing
+        SQL functions.
+
+        :param terms:
+            Type: list[expression]
+
+            A list of terms to select.  These can be any type of int, float, str, bool, or Term.  They cannot be a Field
+            unless the function ``Query.from_`` is called first.
+
+        :returns QueryBuilder
+        """
+        return cls._builder(**kwargs).select(*terms)
+
+    @classmethod
+    def update(cls, table: Union[str, "Table"], **kwargs) -> "QueryBuilderType":
+        """
+        Query builder entry point.  Initializes query building and sets the table to update.  When using this
+        function, the query becomes an UPDATE query.
+
+        :param table:
+            Type: Table or str
+
+            An instance of a Table object or a string table name.
+
+        :returns QueryBuilder
+        """
+        return cls._builder(**kwargs).update(table)
+
+    @classmethod
+    def Table(cls, table_name: str, **kwargs) -> "Table[QueryBuilderType]":
+        """
+        Convenience method for creating a Table that uses this Query class.
+
+        :param table_name:
+            Type: str
+
+            A string table name.
+
+        :returns Table
+        """
+        return Table(table_name, query_cls=cls, **kwargs)
+
+    @classmethod
+    def Tables(cls, *names: Union[TypedTuple[str, str], str], **kwargs: Any) -> List["Table[QueryBuilderType]"]:  # type: ignore
+        """
+        Convenience method for creating many tables that uses this Query class.
+        See ``Query.make_tables`` for details.
+
+        :param names:
+            Type: list[str or tuple]
+
+            A list of string table names, or name and alias tuples.
+
+        :returns Table
+        """
+        return make_tables(*names, query_cls=cls, **kwargs)
+
+
+class Query(BaseQuery["QueryBuilder"]):
+    """
+    Query is the primary class and entry point in pypika. It is used to build queries iteratively using the builder
+    design
+    pattern.
+
+    This class is immutable.
+    """
+
+    @classmethod
+    def _builder(cls, **kwargs: Any) -> "QueryBuilder":
+        return QueryBuilder(**kwargs)
 
 
 class Table(Selectable, Generic[QueryBuilderType]):
@@ -168,15 +345,15 @@ class Table(Selectable, Generic[QueryBuilderType]):
         name: str,
         schema: Union[str, list, tuple, Schema, None] = None,
         alias: Optional[str] = None,
-        query_cls: Optional[Type["Query[QueryBuilderType]"]] = None,
+        query_cls: Type["BaseQuery[QueryBuilderType]"] = Query,  # type: ignore
     ) -> None:
         super().__init__(alias)
         self._table_name = name
         self._schema = self._init_schema(schema)
-        self._query_cls: Type["Query[QueryBuilderType]"] = query_cls or Query
+        self._query_cls: Type["BaseQuery[QueryBuilderType]"] = query_cls
         self._for: Optional[Criterion] = None
         self._for_portion: Optional[PeriodCriterion] = None
-        if not issubclass(self._query_cls, Query):
+        if not issubclass(self._query_cls, BaseQuery):
             raise TypeError("Expected 'query_cls' to be subclass of Query")
 
     def get_table_name(self) -> str:
@@ -280,7 +457,9 @@ class Table(Selectable, Generic[QueryBuilderType]):
 
 
 def make_tables(
-    *names: Union[TypedTuple[str, str], str], query_cls: "Optional[Type[Query[QueryBuilderType]]]" = None, **kwargs: Any
+    *names: Union[TypedTuple[str, str], str],
+    query_cls: "Type[BaseQuery[QueryBuilderType]]" = Query,  # type: ignore
+    **kwargs: Any,
 ) -> List[Table[QueryBuilderType]]:
     """
     Shortcut to create many tables. If `names` param is a tuple, the first
@@ -389,175 +568,7 @@ class PeriodFor(SQLPart):
 _TableClass = Table
 
 
-class Query(Generic[QueryBuilderType]):
-    """
-    Query is the primary class and entry point in pypika. It is used to build queries iteratively using the builder
-    design
-    pattern.
-
-    This class is immutable.
-    """
-
-    @classmethod
-    def _builder(cls, **kwargs: Any) -> "QueryBuilderType":
-        return QueryBuilder(**kwargs)
-
-    @classmethod
-    def from_(cls, table: Union[Selectable, str], **kwargs: Any) -> "QueryBuilderType":
-        """
-        Query builder entry point.  Initializes query building and sets the table to select from.  When using this
-        function, the query becomes a SELECT query.
-
-        :param table:
-            Type: Table or str
-
-            An instance of a Table object or a string table name.
-
-        :returns QueryBuilder
-        """
-        return cls._builder(**kwargs).from_(table)
-
-    @classmethod
-    def create_table(cls, table: Union[str, Table]) -> "CreateQueryBuilder":
-        """
-        Query builder entry point. Initializes query building and sets the table name to be created. When using this
-        function, the query becomes a CREATE statement.
-
-        :param table: An instance of a Table object or a string table name.
-
-        :return: CreateQueryBuilder
-        """
-        return CreateQueryBuilder().create_table(table)
-
-    @classmethod
-    def drop_database(cls, database: Union[Database, str]) -> "DropQueryBuilder":
-        """
-        Query builder entry point. Initializes query building and sets the table name to be dropped. When using this
-        function, the query becomes a DROP statement.
-
-        :param database: An instance of a Database object or a string database name.
-
-        :return: DropQueryBuilder
-        """
-        return DropQueryBuilder().drop_database(database)
-
-    @classmethod
-    def drop_table(cls, table: Union[str, Table]) -> "DropQueryBuilder":
-        """
-        Query builder entry point. Initializes query building and sets the table name to be dropped. When using this
-        function, the query becomes a DROP statement.
-
-        :param table: An instance of a Table object or a string table name.
-
-        :return: DropQueryBuilder
-        """
-        return DropQueryBuilder().drop_table(table)
-
-    @classmethod
-    def drop_user(cls, user: str) -> "DropQueryBuilder":
-        """
-        Query builder entry point. Initializes query building and sets the table name to be dropped. When using this
-        function, the query becomes a DROP statement.
-
-        :param user: String user name.
-
-        :return: DropQueryBuilder
-        """
-        return DropQueryBuilder().drop_user(user)
-
-    @classmethod
-    def drop_view(cls, view: str) -> "DropQueryBuilder":
-        """
-        Query builder entry point. Initializes query building and sets the table name to be dropped. When using this
-        function, the query becomes a DROP statement.
-
-        :param view: String view name.
-
-        :return: DropQueryBuilder
-        """
-        return DropQueryBuilder().drop_view(view)
-
-    @classmethod
-    def into(cls, table: Union[Table, str], **kwargs: Any) -> "QueryBuilderType":
-        """
-        Query builder entry point.  Initializes query building and sets the table to insert into.  When using this
-        function, the query becomes an INSERT query.
-
-        :param table:
-            Type: Table or str
-
-            An instance of a Table object or a string table name.
-
-        :returns QueryBuilder
-        """
-        return cls._builder(**kwargs).into(table)
-
-    @classmethod
-    def with_(cls, table: Selectable, name: str, **kwargs: Any) -> "QueryBuilderType":
-        return cls._builder(**kwargs).with_(table, name)
-
-    @classmethod
-    def select(cls, *terms: Union[int, float, str, bool, Term], **kwargs: Any) -> "QueryBuilderType":
-        """
-        Query builder entry point.  Initializes query building without a table and selects fields.  Useful when testing
-        SQL functions.
-
-        :param terms:
-            Type: list[expression]
-
-            A list of terms to select.  These can be any type of int, float, str, bool, or Term.  They cannot be a Field
-            unless the function ``Query.from_`` is called first.
-
-        :returns QueryBuilder
-        """
-        return cls._builder(**kwargs).select(*terms)
-
-    @classmethod
-    def update(cls, table: Union[str, Table], **kwargs) -> "QueryBuilderType":
-        """
-        Query builder entry point.  Initializes query building and sets the table to update.  When using this
-        function, the query becomes an UPDATE query.
-
-        :param table:
-            Type: Table or str
-
-            An instance of a Table object or a string table name.
-
-        :returns QueryBuilder
-        """
-        return cls._builder(**kwargs).update(table)
-
-    @classmethod
-    def Table(cls, table_name: str, **kwargs) -> Table[QueryBuilderType]:
-        """
-        Convenience method for creating a Table that uses this Query class.
-
-        :param table_name:
-            Type: str
-
-            A string table name.
-
-        :returns Table
-        """
-        return Table(table_name, query_cls=cls, **kwargs)
-
-    @classmethod
-    def Tables(cls, *names: Union[TypedTuple[str, str], str], **kwargs: Any) -> List["Table[QueryBuilderType]"]:
-        """
-        Convenience method for creating many tables that uses this Query class.
-        See ``Query.make_tables`` for details.
-
-        :param names:
-            Type: list[str or tuple]
-
-            A list of string table names, or name and alias tuples.
-
-        :returns Table
-        """
-        return make_tables(*names, query_cls=cls, **kwargs)
-
-
-class _SetOperation(Selectable, Term, SQLPart):
+class _SetOperation(Selectable, Term, SQLPart):  # type: ignore
     """
     A Query class wrapper for a all set operations, Union DISTINCT or ALL, Intersect, Except or Minus
 
@@ -728,7 +739,7 @@ class QueryBuilder(Selectable, Term, SQLPart):
     SECONDARY_QUOTE_CHAR: Optional[str] = "'"
     ALIAS_QUOTE_CHAR: Optional[str] = None
     QUERY_ALIAS_QUOTE_CHAR: Optional[str] = None
-    QUERY_CLS = Query
+    QUERY_CLS: Type[BaseQuery] = Query
 
     def __init__(
         self,
@@ -850,7 +861,7 @@ class QueryBuilder(Selectable, Term, SQLPart):
         self._insert_table = new_table if self._insert_table == current_table else self._insert_table
         self._update_table = new_table if self._update_table == current_table else self._update_table
 
-        self._with = [alias_query.replace_table(current_table, new_table) for alias_query in self._with]
+        self._with = [alias_query.replace_table(current_table, new_table) for alias_query in self._with]  # TODO: why?
         self._selects = [
             select.replace_table(current_table, new_table) if isinstance(select, Term) else select
             for select in self._selects
@@ -1160,7 +1171,7 @@ class QueryBuilder(Selectable, Term, SQLPart):
         self._offset = slice.start
         self._limit = slice.stop
 
-    @overload
+    @overload  # type: ignore[override]
     def __getitem__(self, item: str) -> Field:
         ...
 
@@ -1739,7 +1750,7 @@ class Join(SQLPart):
         :return:
             A copy of the join with the tables replaced.
         """
-        self.item = self.item.replace_table(current_table, new_table)
+        self.item = self.item.replace_table(current_table, new_table)  # TODO: why?
 
 
 class JoinOn(Join):
@@ -1831,7 +1842,7 @@ class CreateQueryBuilder(SQLPart):
     QUOTE_CHAR: Optional[str] = '"'
     SECONDARY_QUOTE_CHAR: Optional[str] = "'"
     ALIAS_QUOTE_CHAR: Optional[str] = None
-    QUERY_CLS = Query
+    QUERY_CLS: Type[BaseQuery] = Query
 
     def __init__(self, dialect: Optional[Dialects] = None) -> None:
         self._create_table: Optional[Table] = None
@@ -2184,7 +2195,7 @@ class DropQueryBuilder(SQLPart):
     QUOTE_CHAR: Optional[str] = '"'
     SECONDARY_QUOTE_CHAR: Optional[str] = "'"
     ALIAS_QUOTE_CHAR: Optional[str] = None
-    QUERY_CLS = Query
+    QUERY_CLS: Type[BaseQuery] = Query
 
     def __init__(self, dialect: Optional[Dialects] = None) -> None:
         self._drop_target_kind: Optional[str] = None

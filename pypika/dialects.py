@@ -10,7 +10,7 @@ from pypika.queries import (
     DropQueryBuilder,
     Selectable,
     Table,
-    Query,
+    BaseQuery,
     QueryBuilder,
     JoinOn,
 )
@@ -27,7 +27,7 @@ from pypika.terms import (
 from pypika.utils import QueryException, builder, format_quotes
 
 
-class SnowflakeQuery(Query["SnowflakeQueryBuilder"]):
+class SnowflakeQuery(BaseQuery["SnowflakeQueryBuilder"]):
     """
     Defines a query class for use with Snowflake.
     """
@@ -71,7 +71,7 @@ class SnowflakeDropQueryBuilder(DropQueryBuilder):
         super().__init__(dialect=Dialects.SNOWFLAKE)
 
 
-class MySQLQuery(Query["MySQLQueryBuilder"]):
+class MySQLQuery(BaseQuery["MySQLQueryBuilder"]):
     """
     Defines a query class for use with MySQL.
     """
@@ -108,7 +108,7 @@ class MySQLQueryBuilder(QueryBuilder):
         self._for_update_of: Set[str] = set()
 
     def __copy__(self) -> Self:
-        newone = cast(MySQLQueryBuilder, super().__copy__())
+        newone = super().__copy__()
         newone._duplicate_updates = copy(self._duplicate_updates)
         newone._ignore_duplicates = copy(self._ignore_duplicates)
         return newone
@@ -238,7 +238,7 @@ class MySQLDropQueryBuilder(DropQueryBuilder):
     QUOTE_CHAR = "`"
 
 
-class VerticaQuery(Query["VerticaQueryBuilder"]):
+class VerticaQuery(BaseQuery["VerticaQueryBuilder"]):
     """
     Defines a query class for use with Vertica.
     """
@@ -360,7 +360,7 @@ class VerticaCopyQueryBuilder:
         return self.get_sql()
 
 
-class OracleQuery(Query["OracleQueryBuilder"]):
+class OracleQuery(BaseQuery["OracleQueryBuilder"]):
     """
     Defines a query class for use with Oracle.
     """
@@ -384,7 +384,7 @@ class OracleQueryBuilder(QueryBuilder):
         return super().get_sql(*args, **kwargs)
 
 
-class PostgreSQLQuery(Query["PostgreSQLQueryBuilder"]):
+class PostgreSQLQuery(BaseQuery["PostgreSQLQueryBuilder"]):
     """
     Defines a query class for use with PostgreSQL.
     """
@@ -417,7 +417,7 @@ class PostgreSQLQueryBuilder(QueryBuilder):
         self._for_update_of: Set[str] = set()
 
     def __copy__(self) -> Self:
-        newone = cast(PostgreSQLQueryBuilder, super().__copy__())
+        newone = super().__copy__()
         newone._returns = copy(self._returns)
         newone._on_conflict_do_updates = copy(self._on_conflict_do_updates)
         return newone
@@ -665,7 +665,7 @@ class PostgreSQLQueryBuilder(QueryBuilder):
         return querystring
 
 
-class RedshiftQuery(Query["RedShiftQueryBuilder"]):
+class RedshiftQuery(BaseQuery["RedShiftQueryBuilder"]):
     """
     Defines a query class for use with Amazon Redshift.
     """
@@ -679,7 +679,7 @@ class RedShiftQueryBuilder(QueryBuilder):
     QUERY_CLS = RedshiftQuery
 
 
-class MSSQLQuery(Query["MSSQLQueryBuilder"]):
+class MSSQLQuery(BaseQuery["MSSQLQueryBuilder"]):
     """
     Defines a query class for use with Microsoft SQL Server.
     """
@@ -761,7 +761,7 @@ class MSSQLQueryBuilder(QueryBuilder):
         )
 
 
-class ClickHouseQuery(Query["ClickHouseQueryBuilder"]):
+class ClickHouseQuery(BaseQuery["ClickHouseQueryBuilder"]):
     """
     Defines a query class for use with Yandex ClickHouse.
     """
@@ -868,7 +868,7 @@ class SQLLiteValueWrapper(ValueWrapper):
         return super().get_value_sql(**kwargs)
 
 
-class SQLLiteQuery(Query["SQLLiteQueryBuilder"]):
+class SQLLiteQuery(BaseQuery["SQLLiteQueryBuilder"]):
     """
     Defines a query class for use with Microsoft SQL Server.
     """
