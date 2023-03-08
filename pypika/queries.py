@@ -153,7 +153,7 @@ class BaseQuery(Generic[QueryBuilderType]):
     design
     pattern.
 
-    This class is immutable.
+    This class is the generic base class for Query.
     """
 
     @classmethod
