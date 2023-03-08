@@ -1,13 +1,7 @@
-from typing import Any, Callable, List, Optional, Protocol, Type, TYPE_CHECKING, runtime_checkable
+from typing import Any, Callable, List, Optional, Type, Union, overload, TypeVar, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    import sys
-    from typing import overload, TypeVar
-
-    if sys.version_info >= (3, 10):
-        from typing import ParamSpec, Concatenate
-    else:
-        from typing_extensions import ParamSpec, Concatenate
+    from typing_extensions import ParamSpec, Concatenate
 
 __author__ = "Timothy Heys"
 __email__ = "theys@kayak.com"
@@ -50,18 +44,18 @@ if TYPE_CHECKING:
     _S = TypeVar('_S')
     _P = ParamSpec('_P')
 
-if TYPE_CHECKING:
 
-    @overload
-    def builder(func: Callable[Concatenate[_S, _P], None]) -> Callable[Concatenate[_S, _P], _S]:
-        ...
-
-    @overload
-    def builder(func: Callable[Concatenate[_S, _P], _T]) -> Callable[Concatenate[_S, _P], _T]:
-        ...
+@overload
+def builder(func: "Callable[Concatenate[_S, _P], Union[_S, None]]") -> "Callable[Concatenate[_S, _P], _S]":
+    ...
 
 
-def builder(func):
+@overload
+def builder(func: "Callable[Concatenate[_S, _P], _T]") -> "Callable[Concatenate[_S, _P], _T]":
+    ...
+
+
+def builder(func: "Callable[Concatenate[_S, _P], Union[_T, None]]") -> "Callable[Concatenate[_S, _P], Union[_T, _S]]":
     """
     Decorator for wrapper "builder" functions.  These are functions on the Query class or other classes used for
     building queries which mutate the query and return self.  To make the build functions immutable, this decorator is
@@ -70,7 +64,7 @@ def builder(func):
     """
     import copy
 
-    def _copy(self, *args, **kwargs):
+    def _copy(self: "_S", *args: "_P.args", **kwargs: "_P.kwargs"):
         self_copy = copy.copy(self) if getattr(self, "immutable", True) else self
         result = func(self_copy, *args, **kwargs)
 
@@ -84,7 +78,7 @@ def builder(func):
     return _copy
 
 
-def ignore_copy(func: Callable) -> Callable:
+def ignore_copy(func: "Callable[[_S, str], _T]") -> "Callable[[_S, str], _T]":
     """
     Decorator for wrapping the __getattr__ function for classes that are copied via deepcopy.  This prevents infinite
     recursion caused by deepcopy looking for magic functions in the class. Any class implementing __getattr__ that is
@@ -143,16 +137,9 @@ def format_alias_sql(
     )
 
 
-def validate(*args: Any, exc: Exception, type: Optional[Type] = None) -> None:
+def validate(*args: Any, exc: Optional[Exception], type: Optional[Type] = None) -> None:
     if type is not None:
+        assert exc is not None
         for arg in args:
             if not isinstance(arg, type):
                 raise exc
-
-
-@runtime_checkable
-class SQLPart(Protocol):
-    """This protocol indicates the class can generate a part of SQL"""
-
-    def get_sql(self, **kwargs) -> str:
-        ...
